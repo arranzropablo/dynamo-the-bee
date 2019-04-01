@@ -2,14 +2,18 @@ package main
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"os"
 )
 
 func main() {
+	connectToAWS()
 
-}
+	result, err := svc.ListTables(&dynamodb.ListTablesInput{})
 
-
-func readString() (result string) {
-	fmt.Scanf("%s", &result)
-	return result
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	fmt.Println(result)
 }
