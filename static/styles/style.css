@@ -1,0 +1,9 @@
+.table-list > nav-link {
+    padding: .25rem .5rem;
+}
+
+.table-list {
+    width: 100px;
+    height: 100%;
+    overflow: auto;
+}
