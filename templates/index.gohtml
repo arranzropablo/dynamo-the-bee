@@ -18,7 +18,7 @@
     <nav class="nav flex-column table-list" style="padding-top: 5%">
         <a class="nav-link" href="#"><i class="fas fa-plus"></i> Create table</a>
         {{range .Tables}}
-            <a class="nav-link" href="#">{{.}}</a>
+            <a class="nav-link" href="/table/{{.}}">{{.}}</a>
         {{end}}
     </nav>
 
