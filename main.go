@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"gopkg.in/underarmour/dynago.v2"
 	"html/template"
 	"log"
 	"net/http"
@@ -20,13 +21,12 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		result, err := db.ListTables().All()
+		result, err := client.ListTables().Execute()
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		fmt.Println(result)
-		err = tpl.ExecuteTemplate(w, "index.gohtml", struct{Tables []string}{result})
+		err = tpl.ExecuteTemplate(w, "index.gohtml", struct{Tables []string}{result.TableNames})
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -34,12 +34,20 @@ func main() {
 
 	//manejador del nombre para enseñar los elementos
 	http.HandleFunc("/table/", func(w http.ResponseWriter, r *http.Request) {
-		table := db.Table(strings.TrimPrefix(r.URL.Path, "/table/"))
-		//fmt.Println(table.Describe().Run())
+		tableName := strings.TrimPrefix(r.URL.Path, "/table/")
+		table, _ := client.DescribeTable(tableName)
 
-		table.Put(struct{b_id int}{2}).Run()
-		q := table.Get("b_id", 2)
-		fmt.Println(q)
+		fmt.Println(table.Table.AttributeDefinitions)
+		fmt.Println(table.Table.KeySchema)
+		fmt.Println(table.Table.GlobalSecondaryIndexes)
+		fmt.Println(table.Table.TableStatus)
+		a, _ := client.Query(tableName).KeyConditionExpression("b_id != :id", dynago.P(":id", 2)).Desc().Execute()
+
+		fmt.Println(a)
+		//
+		//table.Put(struct{b_id int}{2}).Run()
+		//q := table.Get("b_id", 2)
+		//fmt.Println(q)
 	})
 
 	err := http.ListenAndServe(":8080", nil)

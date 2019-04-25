@@ -1,21 +1,18 @@
 package main
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/guregu/dynamo"
+	"gopkg.in/underarmour/dynago.v2"
 )
 
-var db *dynamo.DB
+var client *dynago.Client
 
 func connectToAWS() {
 
-	awsSession := session.Must(session.NewSession(&aws.Config{
-		Endpoint: aws.String("dynamodb.us-east-1.amazonaws.com"),
-		Region: aws.String("us-east-1"),
-		Credentials: credentials.NewSharedCredentials("", ""),
+	client = dynago.NewClient(dynago.NewAwsExecutor(dynago.ExecutorConfig{
+		Region:    "us-east-1",
+		AccessKey: "",
+		SecretKey: "",
+		SessionToken: "",
 	}))
 
-	db = dynamo.New(awsSession)
 }
