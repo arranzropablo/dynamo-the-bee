@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"gopkg.in/underarmour/dynago.v2"
 	"html/template"
 	"log"
@@ -9,7 +8,13 @@ import (
 	"strings"
 )
 
+type Table struct {
+	Fields []string
+	Items []dynago.Document
+}
+
 var tpl *template.Template
+var templateArgs = make(map[string]interface{})
 
 func init() {
 	connectToAWS()
@@ -21,34 +26,54 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		result, err := client.ListTables().Execute()
-		if err != nil {
-			log.Fatalln(err)
-		}
+		templateArgs["Tables"] = getTables()
 
-		err = tpl.ExecuteTemplate(w, "index.gohtml", struct{Tables []string}{result.TableNames})
+		err := tpl.ExecuteTemplate(w, "index.gohtml", templateArgs)
 		if err != nil {
 			log.Fatalln(err)
 		}
 	})
 
-	//manejador del nombre para enseñar los elementos
 	http.HandleFunc("/table/", func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := templateArgs["Tables"]; !ok {
+			templateArgs["Tables"] = getTables()
+		}
+
 		tableName := strings.TrimPrefix(r.URL.Path, "/table/")
-		table, _ := client.DescribeTable(tableName)
 
-		fmt.Println(table.Table.AttributeDefinitions)
-		fmt.Println(table.Table.KeySchema)
-		fmt.Println(table.Table.GlobalSecondaryIndexes)
-		fmt.Println(table.Table.TableStatus)
-		a, _ := client.Query(tableName).KeyConditionExpression("b_id != :id", dynago.P(":id", 2)).Desc().Execute()
+		fields, items := getTableItems(tableName, 100)
 
-		fmt.Println(a)
-		//
-		//table.Put(struct{b_id int}{2}).Run()
-		//q := table.Get("b_id", 2)
-		//fmt.Println(q)
+		templateArgs["Table"] = Table{fields, items}
+		err := tpl.ExecuteTemplate(w, "index.gohtml", templateArgs)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		delete(templateArgs, "Table")
+
+		///como tengo todos los fields en un set solo tengo q hacer un for sobre esos fields y cogerlos para cada elem asi estaran en el mismo orden
+		//cuando los vaya a mostrar por pantalla q la primary key sea la primera y luego las dema
+
+
 	})
+
+	//Aqui meter para hacer la busqueda, q te muestre los fields
+	//http.HandleFunc("/table/", func(w http.ResponseWriter, r *http.Request) {
+	//	tableName := strings.TrimPrefix(r.URL.Path, "/table/")
+	//
+	//	//realmente esto seria para hacer la busqueda, para q me salgan todos los campos, para mostrar por pantalla la tabla hay q hacer el limit y no hacen falta todos los fields
+	//	//maybe this takes too much time in large tables and I should limit the results to retrieve the fields
+	//	b, _ := client.Scan(tableName).Execute()
+	//	set := make(map[string]bool)
+	//	for _, i := range b.Items {
+	//		for k := range i {
+	//			set[k] = true
+	//		}
+	//	}
+	//	//cuando los vaya a mostrar por pantalla q la primary key sea la primera y luego las dema
+	//	println(b)
+	//
+	//})
 
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
